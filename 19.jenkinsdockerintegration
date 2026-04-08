@@ -1,0 +1,58 @@
+STEP 1: Create Jenkins Job
+- Open Jenkins Dashboard
+- Click "New Item"
+- Enter name: Docker Integration with Jenkins
+- Select "Freestyle project"
+- Click OK
+
+STEP 2: Configure Job
+- In "Source Code Management":
+  → Select Git
+  → Paste your GitHub repository URL (which contains Dockerfile & Java file)
+- In "Build Triggers":
+  → Select as needed (e.g., GitHub hook trigger or manual build)
+- In "Build Environment":
+  → Configure as required
+
+STEP 3: Create GitHub Repository
+- Create a new repository in GitHub
+- Add the following files:
+  → Dockerfile
+  → Java file (e.g., Main.java)
+
+Sample Java File (Main.java):
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from Docker + Jenkins!");
+    }
+}
+
+Sample Dockerfile:
+FROM openjdk:17
+WORKDIR /app
+COPY Main.java .
+RUN javac Main.java
+CMD ["java", "Main"]
+
+STEP 4: Add Build Commands in Jenkins
+- Go to "Build" section
+- Click "Add build step"
+- Select "Execute Windows batch command"
+- Add the following commands:
+
+docker build -t java-app .
+docker run -d -t java-app
+
+STEP 5: Save & Build
+- Click "Save"
+- Click "Build Now"
+
+STEP 6: Verify Output
+- Check Console Output in Jenkins (should show success)
+- Open Docker Desktop or run:
+  docker images
+  docker ps
+
+You should see:
+- Image: java-app
+- Running container (if build is successful)
