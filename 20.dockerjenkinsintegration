@@ -1,0 +1,225 @@
+jenkins-tomcat-maven-tested/
+│
+├── src/main/java/com/example/HelloServlet.java
+├── src/main/webapp/index.jsp
+├── src/main/webapp/WEB-INF/web.xml
+├── src/test/java/com/example/HelloServletTest.java
+├── pom.xml
+├── Dockerfile
+├── Jenkinsfile
+└── README.md
+
+
+---
+
+## Step 2: Java Servlet Code
+
+### HelloServlet.java
+```java
+package com.example;
+
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+
+public class HelloServlet extends HttpServlet {
+    protected void doGet(HttpServletRequest request,
+                         HttpServletResponse response)
+                         throws ServletException, IOException {
+
+        response.setContentType("text/html");
+        PrintWriter out = response.getWriter();
+
+        out.println("<h2>Deployment Successful!</h2>");
+        out.println("<h3>GitHub → Jenkins → Docker → Tomcat</h3>");
+    }
+}
+
+Step 3: web.xml
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee" version="3.1">
+
+    <servlet>
+        <servlet-name>HelloServlet</servlet-name>
+        <servlet-class>com.example.HelloServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>HelloServlet</servlet-name>
+        <url-pattern>/hello</url-pattern>
+    </servlet-mapping>
+
+</web-app>
+
+Step 4: index.jsp
+<html>
+<head>
+<title>CI/CD Demo</title>
+</head>
+<body>
+<h1>Welcome to CI/CD Pipeline Demo</h1>
+<a href="hello">Click Here</a>
+</body>
+</html>
+
+Step 5: Unit Test (HelloServletTest.java)
+package com.example;
+
+import static org.mockito.Mockito.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.Test;
+
+public class HelloServletTest {
+
+    @Test
+    void testDoGet() throws Exception {
+
+        HelloServlet servlet = new HelloServlet();
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter writer = new PrintWriter(stringWriter);
+
+        when(response.getWriter()).thenReturn(writer);
+
+        servlet.doGet(request, response);
+
+        writer.flush();
+
+        String result = stringWriter.toString();
+
+        assert(result.contains("Deployment Successful!"));
+        assert(result.contains("GitHub"));
+        assert(result.contains("Jenkins"));
+        assert(result.contains("Docker"));
+        assert(result.contains("Tomcat"));
+
+        verify(response).setContentType("text/html");
+    }
+}
+
+Step 6: pom.xml
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>jenkins-tomcat-maven-tested</artifactId>
+    <version>1.0</version>
+    <packaging>war</packaging>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.9.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.0.0</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+</project>
+
+Step 7: Dockerfile
+FROM tomcat:9.0
+
+COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
+
+EXPOSE 8087
+
+CMD ["catalina.sh", "run"]
+
+Step 8: Jenkinsfile (Pipeline Script)
+pipeline {
+    agent any
+
+    tools {
+        maven 'mymaven'
+        jdk 'myjdk'
+    }
+
+    environment {
+        IMAGE_NAME = "sample-webapp"
+        CONTAINER_NAME = "sample-webapp-container"
+    }
+
+    stages {
+
+        stage('Clone') {
+            steps {
+                echo 'Cloning repository'
+                // git 'https://github.com/your-repo.git'
+            }
+        }
+
+        stage('Build WAR') {
+            steps {
+                bat 'mvn clean package'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                bat 'mvn test'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t sample-webapp .'
+            }
+        }
+
+        stage('Stop Old Container') {
+            steps {
+                bat 'docker stop sample-webapp-container || exit 0'
+                bat 'docker rm sample-webapp-container || exit 0'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                bat 'docker run -d -p 8087:8087 --name sample-webapp-container sample-webapp'
+            }
+        }
+
+    }
+}
+
+Step 9: Create Freestyle Job in Jenkins
+Open Jenkins Dashboard
+Click New Item → Freestyle Project
+Add Git Repository URL
+Add Build Step → Execute Windows Batch Command:
+mvn clean package
+docker build -t sample-webapp .
+docker run -d -p 8087:8087 sample-webapp
+
+Step 10: Run Pipeline
+Click Build Now
+Check Console Output
+Step 11: Verify Deployment
+Check running containers
+docker ps
+
+Access Application
+http://localhost:8087
